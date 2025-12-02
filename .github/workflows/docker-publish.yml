@@ -39,6 +39,10 @@ jobs:
         # 根据你的截图，镜像名称改为 online-clipboard
         tags: ${{ secrets.DOCKERHUB_USERNAME }}/online-clipboard:latest
 
+    - name: Fix README image paths for Docker Hub
+      run: |
+        sed -i 's|src="docs/|src="https://github.com/${{ github.repository }}/raw/${{ github.ref_name }}/docs/|g' README.md
+
     - name: Update Docker Hub description
       # 使用 peter-evans/dockerhub-description 更新 Docker Hub 的 Overview
       uses: peter-evans/dockerhub-description@v4

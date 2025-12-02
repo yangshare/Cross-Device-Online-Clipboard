@@ -5,6 +5,12 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D14-green.svg)
 
+## 📸 界面预览
+
+<p align="center">
+  <img src="docs/image.png" alt="Project Screenshot" width="800">
+</p>
+
 ## ✨ 功能特性
 
 *   **即扫即用**：PC 端生成动态二维码，手机扫码即连。
@@ -20,7 +26,7 @@
 
 1.  **克隆项目**
     ```bash
-    git clone <repository-url>
+    git clone https://github.com/yangshare/Cross-Device-Online-Clipboard.git
     cd online-clipboard
     ```
 
@@ -106,4 +112,4 @@ server {
 
 ## 📄 License
 
-MIT
+Apache-2.0 license
