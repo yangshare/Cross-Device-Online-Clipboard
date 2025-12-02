@@ -1,0 +1,41 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "master", "main" ]
+    # 也可以添加 tags 触发，例如：
+    # tags:
+    #   - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up QEMU
+      # 设置 QEMU 以支持多架构构建（可选，如果不需要多架构可移除）
+      uses: docker/setup-qemu-action@v2
+
+    - name: Set up Docker Buildx
+      # 设置 Docker Buildx，这是一个用于构建 Docker 镜像的 CLI 插件
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Docker Hub
+      # 登录 Docker Hub，需要事先在 GitHub 仓库 Secrets 中配置 DOCKERHUB_USERNAME 和 DOCKERHUB_TOKEN
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push
+      # 构建并推送镜像
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        # 这里假设镜像名称为 online-clipboard，你可以根据需要修改
+        # 这里的 latest 标签可以根据 git tag 动态设置
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/online-clipboard:latest
