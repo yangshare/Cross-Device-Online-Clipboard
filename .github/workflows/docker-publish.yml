@@ -36,6 +36,14 @@ jobs:
       with:
         context: .
         push: true
-        # 这里假设镜像名称为 online-clipboard，你可以根据需要修改
-        # 这里的 latest 标签可以根据 git tag 动态设置
+        # 根据你的截图，镜像名称改为 online-clipboard
         tags: ${{ secrets.DOCKERHUB_USERNAME }}/online-clipboard:latest
+
+    - name: Update Docker Hub description
+      # 使用 peter-evans/dockerhub-description 更新 Docker Hub 的 Overview
+      uses: peter-evans/dockerhub-description@v4
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        repository: ${{ secrets.DOCKERHUB_USERNAME }}/online-clipboard
+        readme-filepath: ./README.md
