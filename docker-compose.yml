@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  online-clipboard:
+    container_name: online-clipboard
+    # 使用 Docker Hub 官方镜像
+    image: yangshare/online-clipboard
+    # 如果您已下载源码并希望自行构建，请保留 build 配置
+    # 如果您仅希望直接运行官方镜像，请注释掉 build 配置
+    # build: .
+    ports:
+      - "3000:3000"
+    restart: always

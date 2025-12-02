@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跨屏剪贴板 - PC端</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 350px;
+            background: #fff;
+            border-right: 1px solid #e1e4e8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+        }
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        h1 { color: #2c3e50; margin-bottom: 10px; font-size: 24px; }
+        .qr-container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #qrcode {
+            width: 200px;
+            height: 200px;
+            margin-bottom: 10px;
+        }
+        .instruction {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-top: 10px;
+            line-height: 1.5;
+            text-align: center;
+        }
+        .history-list {
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .history-item {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+            border-left: 4px solid #3498db;
+            animation: slideIn 0.3s ease-out;
+        }
+        .history-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .timestamp {
+            color: #95a5a6;
+            font-size: 12px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .content {
+            color: #2c3e50;
+            font-size: 16px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            line-height: 1.6;
+        }
+        .empty-state {
+            text-align: center;
+            color: #bdc3c7;
+            margin-top: 100px;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .copy-btn {
+            float: right;
+            background: none;
+            border: 1px solid #bdc3c7;
+            color: #7f8c8d;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .copy-btn:hover {
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h1>📱 扫码连接</h1>
+        <div class="qr-container">
+            <img id="qrcode" alt="QR Code" src="">
+            <div class="instruction">
+                使用手机扫描二维码<br>
+                立即同步文本到此电脑
+            </div>
+        </div>
+        <div style="margin-top: 20px; font-size: 12px; color: #999;">
+            确保手机和电脑在同一网络
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="history-list" id="historyList">
+            <div class="empty-state" id="emptyState">
+                <h2>等待输入...</h2>
+                <p>手机端发送的内容将显示在这里</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const qrImage = document.getElementById('qrcode');
+        const historyList = document.getElementById('historyList');
+        const emptyState = document.getElementById('emptyState');
+
+        // 注册为PC端
+        socket.on('connect', () => {
+            socket.emit('register_pc');
+        });
+
+        // 初始化信息（接收二维码）
+        socket.on('pc_init', (data) => {
+            qrImage.src = data.qrCode;
+            console.log('Session ID:', data.sessionId);
+        });
+
+        // 接收文本
+        socket.on('receive_text', (data) => {
+            if (emptyState) emptyState.style.display = 'none';
+            addHistoryItem(data.content, data.timestamp);
+        });
+
+        function addHistoryItem(text, time) {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            
+            const btn = document.createElement('button');
+            btn.className = 'copy-btn';
+            btn.innerText = '复制';
+            btn.onclick = () => {
+                // 优先尝试现代 Clipboard API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        showCopySuccess(btn);
+                    }).catch(err => {
+                        console.warn('Clipboard API failed, falling back to execCommand:', err);
+                        fallbackCopyTextToClipboard(text, btn);
+                    });
+                } else {
+                    // 回退方案：适用于非安全上下文（如局域网 HTTP）
+                    fallbackCopyTextToClipboard(text, btn);
+                }
+            };
+
+            item.innerHTML = `
+                <span class="timestamp">${time}</span>
+                <div class="content">${escapeHtml(text)}</div>
+            `;
+            item.prepend(btn);
+            
+            historyList.insertBefore(item, historyList.firstChild);
+        }
+
+        function fallbackCopyTextToClipboard(text, btn) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            
+            // 将 textarea 移出可视区域，但保持可选中状态
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            textArea.style.top = "0";
+            
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showCopySuccess(btn);
+                } else {
+                    console.error('Fallback copy failed.');
+                    showCopyError(btn);
+                }
+            } catch (err) {
+                console.error('Fallback copy error:', err);
+                showCopyError(btn);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        function showCopySuccess(btn) {
+            btn.innerText = '已复制!';
+            btn.style.borderColor = '#2ecc71';
+            btn.style.color = '#2ecc71';
+            setTimeout(() => {
+                btn.innerText = '复制';
+                btn.style.borderColor = '#bdc3c7';
+                btn.style.color = '#7f8c8d';
+            }, 2000);
+        }
+
+        function showCopyError(btn) {
+            btn.innerText = '失败';
+            btn.style.borderColor = '#e74c3c';
+            btn.style.color = '#e74c3c';
+            setTimeout(() => {
+                btn.innerText = '复制';
+                btn.style.borderColor = '#bdc3c7';
+                btn.style.color = '#7f8c8d';
+            }, 2000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerText = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
