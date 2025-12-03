@@ -11,6 +11,8 @@
   <img src="docs/image.png" alt="Project Screenshot" width="800">
 </p>
 
+> 试用地址：https://copy.yangshare.cn
+
 ## ✨ 功能特性
 
 *   **即扫即用**：PC 端生成动态二维码，手机扫码即连。
